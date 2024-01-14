@@ -1,8 +1,13 @@
 package peacock_team_java_Ing;
 
 
+
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
@@ -19,18 +24,17 @@ import java.util.stream.Stream;
 
 public class Main_GroupSorting {
 	
-	private final static String FILEPATH = "src/main/resources/lng-4.txt";
+	
+	
 	private final static String REGEX="^(\"\\d*\")(;\"\\d*\")*$";
+	private static String FILEPATH= "";
 	
 
 	public static void main(String[] args) {
 		long start = System.currentTimeMillis();
+		FILEPATH = args[0];
 		
-		
-
 		Set<Long[]> dataRead = readNumbersFromFile(FILEPATH);
-		
-		
 		
 		
 		if(dataRead.isEmpty()) {
@@ -42,23 +46,51 @@ public class Main_GroupSorting {
 		List<Set<Long[]>> groups= groupMatches(unGroupMatches);
 		
 		print(groups);
-		System.out.println(System.currentTimeMillis()- start);
+		System.out.printf("Общее время выполнения команды: %.3f секунд ",(System.currentTimeMillis()- start)*0.001);
 
 
 	}
 	
 	private static void print(List<Set<Long[]>> groups) {
-		//Rewrite to file save
-		 System.out.println("Групп размера больше 1: " + groups.stream().filter(s -> s.size() > 1).count());
-         groups.sort(Comparator.comparingInt(s -> -s.size()));
-         int i = 0;
-         for (Set<Long[]> group : groups) {
-             i++;
-             System.out.println("\nГруппа " + i);
-             for (Long[] val : group) {
-                 System.out.println(val);
-             }
-         }
+		
+		String answerPath = FILEPATH.replace(".txt", "-result.txt");
+		Path outPath = Path.of(answerPath);
+		
+		try {
+			Files.createFile(outPath);
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.err.println("Ошибка создания файла ответа");
+		}
+		
+		try (FileOutputStream fos = new FileOutputStream(outPath.toFile());
+	             PrintStream out = new PrintStream(fos)) {
+			
+			 out.println("Ощеее количество групп: " + groups.stream().count());
+	         groups.sort(Comparator.comparingLong(s -> -s.size()));
+	         int i = 0;
+	         for (Set<Long[]> group : groups) {
+	             i++;
+	             out.println("\nГруппа " + i);
+	             for (Long[] line : group) {
+	             for(Long l : line) {
+	            	 out.print(l+" ");
+	            	
+	             }
+	            out.println();
+	             }
+	         }
+
+	        } catch (FileNotFoundException e) {
+	            System.out.println(e.getMessage());
+	            System.err.println("Файл не найден");
+	        } catch (IOException e) {
+	            System.out.println(e.getMessage());
+	            System.err.println("Ошибка записи в файл");
+	        }
+		
+		
+	
     
 		
 	}
@@ -75,7 +107,7 @@ public class Main_GroupSorting {
 							if(group.contains(line)) {
 								group.addAll(temp);
 								isAdded= true;
-								
+								break;
 							}
 						}
 					}
@@ -119,7 +151,7 @@ public class Main_GroupSorting {
 	                            .anyMatch(copies::contains))
 	                    .collect(Collectors.groupingBy(
 	                            s -> Arrays.stream(s)
-	                                    .skip(maxSize)
+	                                    .skip(point)
 	                                    .limit(1)
 	                                    .findFirst().orElse(0L),
 	                            Collectors.toSet()
@@ -131,17 +163,17 @@ public class Main_GroupSorting {
 	}
 
 	private static int longestLine(Set<Long[]> dataRead) {
-		//найдем максимально длинную строку
+		
 		return dataRead.stream().mapToInt(d ->d.length).max().orElse(0);
 	}
 
 	private static Set<Long[]> readNumbersFromFile(String filePath) {
 		 Set<Long[]> numberSet = new HashSet<>();
+		 Pattern pattern = Pattern.compile(REGEX);
 		try(Stream<String> lines = Files.lines(Paths.get(filePath))) {
 			
 			
 			numberSet= lines.filter(l ->{
-				 Pattern pattern = Pattern.compile(REGEX);
 				Matcher matcher = pattern.matcher(l);
                 return matcher.matches();
 			})	.filter(l -> l.length()>2)
@@ -155,11 +187,15 @@ public class Main_GroupSorting {
                     		.toArray(Long[]::new))
                     .collect(Collectors.toSet());                                 
 					
-		} catch (IOException e) {
+		} catch (IOException  e ) {
 			
 			e.printStackTrace();
-			//дописать догтрование ошибки чтения файла
+	System.err.println("Ошибка чтения файла");
+		}catch(NumberFormatException e ) {
+			e.printStackTrace();
+			System.err.println("Ошибка преобразования файла");
 		}
+		
 		return numberSet;
 	}
 
